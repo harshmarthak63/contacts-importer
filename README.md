@@ -260,6 +260,186 @@ npm start
 
 The production build will be available at `http://localhost:3000`.
 
+## Deployment
+
+Deploy your application to make it live and accessible online. Here are the recommended hosting options:
+
+### Option 1: Deploy to Vercel (Recommended)
+
+Vercel is the best platform for Next.js applications, created by the Next.js team. It offers:
+- ✅ Zero-configuration deployment
+- ✅ Automatic HTTPS
+- ✅ Global CDN
+- ✅ Free tier available
+- ✅ Automatic deployments from Git
+- ✅ Environment variables management
+
+#### Step-by-Step Vercel Deployment:
+
+**Method 1: Deploy via Vercel Dashboard (Easiest)**
+
+1. **Push your code to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Sign up/Login to Vercel:**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Sign Up" and choose "Continue with GitHub"
+   - Authorize Vercel to access your GitHub account
+
+3. **Import your project:**
+   - Click "Add New..." → "Project"
+   - Find your `contacts-importer` repository
+   - Click "Import"
+
+4. **Configure the project:**
+   - **Framework Preset**: Next.js (auto-detected)
+   - **Root Directory**: `./` (leave as default)
+   - **Build Command**: `npm run build` (auto-detected)
+   - **Output Directory**: `.next` (auto-detected)
+   - Click "Deploy"
+
+5. **Add Environment Variables:**
+   - After deployment starts, go to Project Settings → Environment Variables
+   - Add all variables from your `.env.local`:
+     ```
+     NEXT_PUBLIC_FIREBASE_API_KEY
+     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+     NEXT_PUBLIC_FIREBASE_PROJECT_ID
+     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+     NEXT_PUBLIC_FIREBASE_APP_ID
+     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+     MISTRAL_API_KEY
+     ```
+   - Select environments: Production, Preview, Development
+   - Click "Save"
+   - Redeploy the project (Deployments → ... → Redeploy)
+
+6. **Your app is live!**
+   - Vercel will provide a URL like: `https://contacts-importer.vercel.app`
+   - You can add a custom domain in Project Settings → Domains
+
+**Method 2: Deploy via Vercel CLI**
+
+1. **Install Vercel CLI:**
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Login to Vercel:**
+   ```bash
+   vercel login
+   ```
+
+3. **Deploy:**
+   ```bash
+   vercel
+   ```
+   - Follow the prompts
+   - When asked for environment variables, add them or add later in dashboard
+
+4. **Deploy to production:**
+   ```bash
+   vercel --prod
+   ```
+
+#### Vercel Environment Variables Setup:
+
+1. Go to your project on Vercel Dashboard
+2. Navigate to **Settings** → **Environment Variables**
+3. Add each variable:
+   - Click "Add New"
+   - Enter variable name (e.g., `NEXT_PUBLIC_FIREBASE_API_KEY`)
+   - Enter variable value
+   - Select environments (Production, Preview, Development)
+   - Click "Save"
+4. **Important**: After adding variables, redeploy your project
+
+### Option 2: Deploy to Firebase Hosting
+
+Since you're already using Firebase, you can host on Firebase Hosting:
+
+1. **Install Firebase CLI:**
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. **Login to Firebase:**
+   ```bash
+   firebase login
+   ```
+
+3. **Initialize Firebase Hosting:**
+   ```bash
+   firebase init hosting
+   ```
+   - Select your Firebase project
+   - Public directory: `out` (for static export) or `.next` (for server-side)
+   - Configure as single-page app: No
+   - Set up automatic builds: Yes
+
+4. **Build the project:**
+   ```bash
+   npm run build
+   ```
+
+5. **Deploy:**
+   ```bash
+   firebase deploy --only hosting
+   ```
+
+**Note**: For Next.js with server-side features, consider using Vercel or configure Firebase Functions.
+
+### Option 3: Other Hosting Options
+
+- **Netlify**: Similar to Vercel, good Next.js support
+- **Railway**: Easy deployment with automatic builds
+- **Render**: Simple deployment with free tier
+- **AWS Amplify**: For AWS ecosystem integration
+
+### Post-Deployment Checklist
+
+After deploying, make sure to:
+
+- [ ] Verify all environment variables are set correctly
+- [ ] Test the application on the live URL
+- [ ] Check Firebase Firestore security rules (update if needed for production)
+- [ ] Test user registration/login (if implemented)
+- [ ] Test contact import functionality
+- [ ] Verify AI mapping works (if Mistral API key is set)
+- [ ] Set up a custom domain (optional)
+- [ ] Configure Firebase security rules for production
+- [ ] Enable Firebase Authentication if needed
+- [ ] Set up monitoring/analytics (optional)
+
+### Updating Your Deployment
+
+Every time you push to your main branch:
+- **Vercel**: Automatically redeploys (if connected to GitHub)
+- **Firebase**: Run `firebase deploy --only hosting` manually
+
+### Troubleshooting Deployment
+
+**Build fails on Vercel:**
+- Check build logs in Vercel dashboard
+- Ensure all environment variables are set
+- Verify `package.json` has correct build script
+- Check for TypeScript errors locally first
+
+**Environment variables not working:**
+- Ensure variables start with `NEXT_PUBLIC_` for client-side access
+- Redeploy after adding new variables
+- Check variable names match exactly (case-sensitive)
+
+**Firebase connection errors:**
+- Verify Firebase config in environment variables
+- Check Firestore security rules allow access
+- Ensure Firestore is enabled in Firebase Console
+
 ## Setup Instructions
 
 ### 1. Clone the Repository
