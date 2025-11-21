@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Edit2, Trash2, AlertCircle, X, Upload, Sparkles } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import Toast from '@/components/Toast';
 import {
   fetchContacts,
   addContact,
@@ -48,6 +49,9 @@ export default function ContactsPage() {
     email: '',
     agentUid: '',
   });
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     dispatch(fetchContacts());
@@ -97,6 +101,7 @@ export default function ContactsPage() {
       initialData[key] = '';
     });
     setFormData(initialData);
+    setErrors({});
     setShowForm(true);
     dispatch(clearError());
   };
@@ -116,6 +121,7 @@ export default function ContactsPage() {
       editData[key] = selectedContact[key] || selectedContact[field.label] || '';
     });
     setFormData(editData);
+    setErrors({});
     setShowForm(true);
     dispatch(clearError());
   };
@@ -136,6 +142,8 @@ export default function ContactsPage() {
       setContactToDelete(null);
       setShowDeleteConfirm(false);
       dispatch(clearError());
+      setSuccessMessage('Contact deleted successfully');
+      setShowSuccess(true);
     } catch (err: any) {
       setShowDeleteConfirm(false);
       setContactToDelete(null);
@@ -147,11 +155,51 @@ export default function ContactsPage() {
     setContactToDelete(null);
   };
 
+  const validateField = (fieldKey: string, value: string, fieldType: string): string => {
+    if (fieldType === 'email' && value) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Please enter a valid email address';
+      }
+    }
+    if (fieldType === 'phone' && value) {
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      if (!phoneRegex.test(value) || value.replace(/\D/g, '').length < 7) {
+        return 'Please enter a valid phone number';
+      }
+    }
+    if (fieldType === 'text' && !value.trim()) {
+      return 'This field is required';
+    }
+    return '';
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    displayFields.forEach((field: any) => {
+      const fieldKey = getFieldKey(field.label, field.core);
+      const value = formData[fieldKey] || '';
+
+      if (field.required && !value.trim()) {
+        newErrors[fieldKey] = `${field.label} is required`;
+      } else if (value) {
+        const error = validateField(fieldKey, value, field.type);
+        if (error) {
+          newErrors[fieldKey] = error;
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
 
-    if (!formData.firstName || !formData.lastName) {
+    if (!validateForm()) {
       return;
     }
 
@@ -178,8 +226,10 @@ export default function ContactsPage() {
 
       if (editingContact && editingContact.id) {
         await dispatch(editContact({ id: editingContact.id, contactData })).unwrap();
+        setSuccessMessage('Contact updated successfully');
       } else {
         await dispatch(addContact(contactData as Omit<Contact, 'id'>)).unwrap();
+        setSuccessMessage('Contact added successfully');
       }
       await dispatch(fetchContacts());
       setShowForm(false);
@@ -197,6 +247,8 @@ export default function ContactsPage() {
         resetData[key] = '';
       });
       setFormData(resetData);
+      setErrors({});
+      setShowSuccess(true);
     } catch (err: any) {
     }
   };
@@ -223,10 +275,14 @@ export default function ContactsPage() {
     dispatch(setSelectedContact(contact.id === selectedContact?.id ? null : contact));
   };
 
-  const handleImportClose = () => {
+  const handleImportClose = (success: boolean = false) => {
     setShowImportModal(false);
     setUseAIImport(false);
     dispatch(fetchContacts());
+    if (success) {
+      setSuccessMessage('Contacts imported successfully');
+      setShowSuccess(true);
+    }
   };
 
   const handleAIImport = () => {
@@ -240,7 +296,13 @@ export default function ContactsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full flex flex-col">
+    <>
+      <Toast
+        message={successMessage}
+        isVisible={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
+      <div className="max-w-6xl mx-auto h-full flex flex-col">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 flex flex-col flex-1 min-h-0">
         <div className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
@@ -356,16 +418,27 @@ export default function ContactsPage() {
               <form onSubmit={handleSubmit} className="p-4 space-y-3">
                 {displayFields.filter((f: any) => f.core && f.label !== 'Agent').map((field: any) => {
                   const fieldKey = getFieldKey(field.label, field.core);
+                  const inputType = field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' ? 'number' : 'text';
                   return (
                     <div key={field.id}>
                       <label className="block text-xs font-medium text-gray-700 mb-1">{field.label}</label>
                       <input
-                        type={field.type === 'number' ? 'number' : 'text'}
+                        type={inputType}
                         value={formData[fieldKey] || ''}
-                        onChange={(e) => setFormData({ ...formData, [fieldKey]: e.target.value })}
-                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        onChange={(e) => {
+                          setFormData({ ...formData, [fieldKey]: e.target.value });
+                          if (errors[fieldKey]) {
+                            setErrors({ ...errors, [fieldKey]: '' });
+                          }
+                        }}
+                        className={`w-full px-2 py-1.5 text-xs border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                          errors[fieldKey] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
                         required={field.required || false}
                       />
+                      {errors[fieldKey] && (
+                        <p className="mt-1 text-xs text-red-600">{errors[fieldKey]}</p>
+                      )}
                     </div>
                   );
                 })}
@@ -384,15 +457,26 @@ export default function ContactsPage() {
                 </div>
                 {displayFields.filter((f: any) => !f.core).map((field: any) => {
                   const fieldKey = getFieldKey(field.label, false);
+                  const inputType = field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' ? 'number' : 'text';
                   return (
                     <div key={field.id}>
                       <label className="block text-xs font-medium text-gray-700 mb-1">{field.label}</label>
                       <input
-                        type={field.type === 'number' ? 'number' : 'text'}
+                        type={inputType}
                         value={formData[fieldKey] || ''}
-                        onChange={(e) => setFormData({ ...formData, [fieldKey]: e.target.value })}
-                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        onChange={(e) => {
+                          setFormData({ ...formData, [fieldKey]: e.target.value });
+                          if (errors[fieldKey]) {
+                            setErrors({ ...errors, [fieldKey]: '' });
+                          }
+                        }}
+                        className={`w-full px-2 py-1.5 text-xs border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                          errors[fieldKey] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
                       />
+                      {errors[fieldKey] && (
+                        <p className="mt-1 text-xs text-red-600">{errors[fieldKey]}</p>
+                      )}
                     </div>
                   );
                 })}
@@ -449,7 +533,12 @@ export default function ContactsPage() {
           </div>
         )}
 
-        <ImportModal isOpen={showImportModal} onClose={handleImportClose} useAI={useAIImport} />
+        <ImportModal 
+          isOpen={showImportModal} 
+          onClose={() => handleImportClose(false)} 
+          onSuccess={() => handleImportClose(true)}
+          useAI={useAIImport} 
+        />
 
         {loading ? (
           <div className="text-center py-8 flex-1 flex items-center justify-center">
@@ -551,5 +640,6 @@ export default function ContactsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

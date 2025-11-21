@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   useAI?: boolean;
 }
 
@@ -22,7 +23,7 @@ const STEPS = [
   { number: 3, label: 'Final Checks', description: 'For Duplicates or Errors' },
 ];
 
-export default function ImportModal({ isOpen, onClose, useAI = false }: ImportModalProps) {
+export default function ImportModal({ isOpen, onClose, onSuccess, useAI = false }: ImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedFileData | null>(null);
   const [mappings, setMappings] = useState<FieldMapping[]>([]);
@@ -580,8 +581,14 @@ export default function ImportModal({ isOpen, onClose, useAI = false }: ImportMo
               </button>
             ) : (
               <button
-                onClick={onClose}
-                className="px-3 py-1 text-xs font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
+                onClick={() => {
+                  if (onSuccess && summary) {
+                    onSuccess();
+                  }
+                  onClose();
+                }}
+                disabled={checkingDuplicates || !summary}
+                className="px-3 py-1 text-xs font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Move to Contacts
               </button>

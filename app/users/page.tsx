@@ -13,6 +13,7 @@ import {
   clearError 
 } from '@/lib/store/slices/usersSlice';
 import { User } from '@/types';
+import Toast from '@/components/Toast';
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
@@ -27,6 +28,9 @@ export default function UsersPage() {
     email: '',
     designation: '' as 'Agent' | 'Sales' | 'Developer' | 'HR' | '',
   });
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -41,13 +45,31 @@ export default function UsersPage() {
     return agentId;
   };
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      dispatch(clearError());
+    if (!validateForm()) {
       return;
     }
 
@@ -71,6 +93,7 @@ export default function UsersPage() {
         }
         
         await dispatch(editUser({ uid: editingUser.uid, userData: updates })).unwrap();
+        setSuccessMessage('User updated successfully');
       } else {
         if (formData.designation === 'Agent') {
           userData.agentId = generateAgentId();
@@ -81,6 +104,7 @@ export default function UsersPage() {
           return;
         }
         await dispatch(addUser(userData)).unwrap();
+        setSuccessMessage('User added successfully');
       }
       
       await dispatch(fetchUsers());
@@ -88,6 +112,8 @@ export default function UsersPage() {
       setEditingUser(null);
       dispatch(setSelectedUser(null));
       setFormData({ name: '', email: '', designation: '' });
+      setErrors({});
+      setShowSuccess(true);
     } catch (err: any) {
     }
   };
@@ -95,7 +121,8 @@ export default function UsersPage() {
   const handleAdd = () => {
     setEditingUser(null);
     dispatch(setSelectedUser(null));
-    setFormData({ name: '', email: '', designation: '' });
+      setFormData({ name: '', email: '', designation: '' });
+    setErrors({});
     setShowForm(true);
     dispatch(clearError());
   };
@@ -103,11 +130,12 @@ export default function UsersPage() {
   const handleEdit = () => {
     if (!selectedUser) return;
     setEditingUser(selectedUser);
-    setFormData({ 
+      setFormData({ 
       name: selectedUser.name, 
       email: selectedUser.email,
       designation: selectedUser.designation || ''
     });
+    setErrors({});
     setShowForm(true);
     dispatch(clearError());
   };
@@ -128,6 +156,8 @@ export default function UsersPage() {
       setUserToDelete(null);
       setShowDeleteConfirm(false);
       dispatch(clearError());
+      setSuccessMessage('User deleted successfully');
+      setShowSuccess(true);
     } catch (err: any) {
       setShowDeleteConfirm(false);
       setUserToDelete(null);
@@ -148,11 +178,18 @@ export default function UsersPage() {
     setEditingUser(null);
     dispatch(setSelectedUser(null));
     setFormData({ name: '', email: '', designation: '' });
+    setErrors({});
     dispatch(clearError());
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full flex flex-col">
+    <>
+      <Toast
+        message={successMessage}
+        isVisible={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
+      <div className="max-w-6xl mx-auto h-full flex flex-col">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 flex flex-col flex-1 min-h-0">
         <div className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
@@ -214,10 +251,20 @@ export default function UsersPage() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (errors.name) {
+                        setErrors({ ...errors, name: '' });
+                      }
+                    }}
+                    className={`w-full px-2 py-1.5 text-xs border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      errors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                     required
                   />
+                  {errors.name && (
+                    <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -226,10 +273,20 @@ export default function UsersPage() {
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (errors.email) {
+                        setErrors({ ...errors, email: '' });
+                      }
+                    }}
+                    className={`w-full px-2 py-1.5 text-xs border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                     required
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -378,5 +435,6 @@ export default function UsersPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
