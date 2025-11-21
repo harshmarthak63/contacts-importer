@@ -1,0 +1,11 @@
+fname,lname,mobile,e-mail,assigned agent,organization,position,comments
+Alice,Anderson,555-0201,alice.anderson@example.com,agent1@company.com,Finance Corp,CFO,Quarterly review
+Bob,Thomas,555-0202,bob.thomas@example.com,agent2@company.com,Healthcare Inc,Medical Director,New facility opening
+Carol,Jackson,555-0203,carol.jackson@example.com,agent1@company.com,Education Group,Principal,Technology upgrade
+Daniel,White,555-0204,daniel.white@example.com,agent2@company.com,Real Estate Co,Broker,Multiple properties
+Frank,Harris,555-0205,frank.harris@example.com,agent1@company.com,Legal Firm,Partner,Compliance review
+Grace,Martin,555-0206,grace.martin@example.com,agent2@company.com,Media Agency,Account Executive,New campaign
+Henry,Thompson,555-0207,henry.thompson@example.com,agent1@company.com,Transportation LLC,Logistics Manager,Fleet expansion
+Ivy,Garcia,555-0208,ivy.garcia@example.com,agent2@company.com,Food Services,Operations Director,New locations
+Jack,Martinez,555-0209,jack.martinez@example.com,agent1@company.com,Construction Co,Project Manager,Major project
+Karen,Robinson,555-0210,karen.robinson@example.com,agent2@company.com,Energy Solutions,Sustainability Manager,Green initiative
