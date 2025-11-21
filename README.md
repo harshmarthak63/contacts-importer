@@ -63,6 +63,203 @@ A full-stack contact management system with intelligent field mapping, built wit
 - **Utilities**: 
   - `clsx` & `tailwind-merge` for conditional styling
 
+## Running Locally
+
+Follow these step-by-step instructions to run the project on your local machine.
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** (version 18.0 or higher) - [Download](https://nodejs.org/)
+- **npm** (comes with Node.js) or **yarn**
+- **Git** - [Download](https://git-scm.com/)
+- A **Firebase account** - [Sign up](https://firebase.google.com/)
+- (Optional) A **Mistral AI account** - [Sign up](https://mistral.ai/) for AI-powered mapping
+
+### Step 1: Clone the Repository
+
+Open your terminal/command prompt and run:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/contacts-importer.git
+cd contacts-importer
+```
+
+Replace `YOUR_USERNAME` with the actual GitHub username or repository URL.
+
+### Step 2: Install Dependencies
+
+Install all required packages:
+
+```bash
+npm install
+```
+
+This will install all dependencies listed in `package.json`. Wait for the installation to complete.
+
+### Step 3: Set Up Firebase Project
+
+1. **Create a Firebase Project:**
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Click "Add project" or "Create a project"
+   - Enter a project name (e.g., "contacts-importer")
+   - Follow the setup wizard (you can skip Google Analytics for now)
+
+2. **Enable Firestore Database:**
+   - In your Firebase project, click on "Firestore Database" in the left sidebar
+   - Click "Create database"
+   - Choose "Start in test mode" (for development)
+   - Select a location closest to you
+   - Click "Enable"
+
+3. **Get Firebase Configuration:**
+   - In Firebase Console, click the gear icon ⚙️ next to "Project Overview"
+   - Select "Project settings"
+   - Scroll down to "Your apps" section
+   - Click the web icon `</>` to add a web app
+   - Register your app (you can use any nickname)
+   - Copy the Firebase configuration object
+
+### Step 4: Configure Environment Variables
+
+1. **Create `.env.local` file:**
+   - In the root directory of the project, create a new file named `.env.local`
+   - Copy the following template:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+MISTRAL_API_KEY=your_mistral_api_key_here
+```
+
+2. **Fill in Firebase values:**
+   - Replace the placeholder values with the actual values from your Firebase configuration
+   - The values should match the `firebaseConfig` object from Firebase Console
+
+3. **Set up Mistral AI (Optional):**
+   - If you want to use AI-powered field mapping:
+     - Sign up at [Mistral AI](https://mistral.ai/)
+     - Get your API key from the dashboard
+     - Add it to `.env.local` as `MISTRAL_API_KEY`
+   - If you skip this, the app will use regular mapping (still works perfectly)
+
+**Note:** The `.env.local` file is already in `.gitignore`, so your secrets won't be committed to git.
+
+### Step 5: Configure Firestore Security Rules
+
+1. **Set up Security Rules:**
+   - In Firebase Console, go to "Firestore Database"
+   - Click on the "Rules" tab
+   - Replace the default rules with:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /company/{companyId}/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+2. **Publish the rules:**
+   - Click "Publish" to save the rules
+
+**⚠️ Important:** These rules allow all access. For production, implement proper authentication.
+
+### Step 6: Run the Development Server
+
+Start the Next.js development server:
+
+```bash
+npm run dev
+```
+
+You should see output like:
+
+```
+  ▲ Next.js 14.0.4
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Ready in 2.5s
+```
+
+### Step 7: Open the Application
+
+1. Open your web browser
+2. Navigate to [http://localhost:3000](http://localhost:3000)
+3. You should see the "Users and Contacts Management System" interface
+
+### Step 8: Verify Everything Works
+
+1. **Check the Users page:**
+   - You should land on the Users page by default
+   - Try adding a test user with designation "Agent"
+
+2. **Check the Contacts page:**
+   - Navigate to "Contacts" in the sidebar
+   - Try adding a test contact
+
+3. **Check Contact Fields:**
+   - Navigate to "Contact Fields" in the sidebar
+   - You should see core fields automatically initialized
+
+4. **Test Import (Optional):**
+   - Go to Contacts page
+   - Click "Import Contacts"
+   - Try uploading a CSV or Excel file
+
+### Troubleshooting
+
+**Issue: Port 3000 is already in use**
+```bash
+# Kill the process using port 3000, or use a different port:
+PORT=3001 npm run dev
+```
+
+**Issue: Firebase connection errors**
+- Verify your `.env.local` file has correct Firebase credentials
+- Check that Firestore Database is enabled in Firebase Console
+- Ensure security rules are published
+
+**Issue: Module not found errors**
+```bash
+# Delete node_modules and reinstall:
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Issue: Build errors**
+```bash
+# Clear Next.js cache and rebuild:
+rm -rf .next
+npm run build
+```
+
+**Issue: AI mapping not working**
+- Verify `MISTRAL_API_KEY` is set in `.env.local`
+- Check that your Mistral API key is valid
+- The app will fall back to regular mapping if AI fails
+
+### Building for Production
+
+To create an optimized production build:
+
+```bash
+npm run build
+npm start
+```
+
+The production build will be available at `http://localhost:3000`.
+
 ## Setup Instructions
 
 ### 1. Clone the Repository
