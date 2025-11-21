@@ -145,8 +145,11 @@ export default function ContactsPage() {
       setSuccessMessage('Contact deleted successfully');
       setShowSuccess(true);
     } catch (err: any) {
+      console.error('Error deleting contact:', err);
+      setError(err.message || 'Failed to delete contact. Please try again.');
       setShowDeleteConfirm(false);
       setContactToDelete(null);
+      setShowSuccess(false);
     }
   };
 
@@ -250,6 +253,9 @@ export default function ContactsPage() {
       setErrors({});
       setShowSuccess(true);
     } catch (err: any) {
+      console.error('Error saving contact:', err);
+      setError(err.message || 'Failed to save contact. Please try again.');
+      setShowSuccess(false);
     }
   };
 

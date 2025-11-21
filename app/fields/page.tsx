@@ -45,6 +45,7 @@ export default function FieldsPage() {
       setEditingField(null);
       setFormData({ label: '', type: 'text' });
     } catch (err: any) {
+      console.error('Error saving field:', err);
     }
   };
 
@@ -87,6 +88,7 @@ export default function FieldsPage() {
       setShowDeleteConfirm(false);
       dispatch(clearError());
     } catch (err: any) {
+      console.error('Error deleting field:', err);
       setShowDeleteConfirm(false);
       setFieldToDelete(null);
     }

@@ -62,29 +62,66 @@ export default function ImportModal({ isOpen, onClose, onSuccess, useAI = false 
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const data = await parseFile(selectedFile);
+      let data;
+      try {
+        data = await parseFile(selectedFile);
+      } catch (error: any) {
+        throw new Error(`Failed to parse file: ${error.message || 'Invalid file format'}`);
+      }
+
+      if (!data || !data.headers || data.headers.length === 0) {
+        throw new Error('File contains no headers. Please ensure the file has column names.');
+      }
+
+      if (!data.rows || data.rows.length === 0) {
+        throw new Error('File contains no data rows.');
+      }
+
       setParsedData(data);
 
-      const [fields, userList] = await Promise.all([
-        getContactFields(),
-        getUsers(),
-      ]);
+      let fields, userList;
+      try {
+        [fields, userList] = await Promise.all([
+          getContactFields(),
+          getUsers(),
+        ]);
+      } catch (error: any) {
+        throw new Error(`Failed to load contact fields or users: ${error.message || 'Unknown error'}`);
+      }
+
+      if (!fields || !Array.isArray(fields)) {
+        throw new Error('Failed to load contact fields');
+      }
 
       setAllContactFields(fields);
       setCustomFields(fields.filter(f => !f.core));
-      setUsers(userList);
+      setUsers(userList || []);
 
       let suggestedMappings: FieldMapping[];
-      if (useAI) {
-        suggestedMappings = await suggestFieldMappingsWithAI(data, fields);
-      } else {
-        suggestedMappings = suggestFieldMappings(data, fields);
+      try {
+        if (useAI) {
+          suggestedMappings = await suggestFieldMappingsWithAI(data, fields);
+        } else {
+          suggestedMappings = suggestFieldMappings(data, fields);
+        }
+      } catch (error: any) {
+        console.error('Error generating field mappings:', error);
+        throw new Error(`Failed to generate field mappings: ${error.message || 'Unknown error'}`);
       }
+
+      if (!suggestedMappings || !Array.isArray(suggestedMappings)) {
+        suggestedMappings = [];
+      }
+
       setMappings(suggestedMappings);
       setDetectingFields(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to parse file');
+      console.error('Error in handleFileSelect:', err);
+      setError(err.message || 'Failed to parse file. Please ensure the file is valid.');
       setDetectingFields(false);
+      setFile(null);
+      setParsedData(null);
+      setMappings([]);
     }
   }, [useAI]);
 
@@ -123,6 +160,7 @@ export default function ImportModal({ isOpen, onClose, onSuccess, useAI = false 
     setCurrentStep(3);
     setCheckingDuplicates(true);
     setImportProgress(0);
+    setError(null);
 
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -131,62 +169,102 @@ export default function ImportModal({ isOpen, onClose, onSuccess, useAI = false 
       const agentEmailMap = new Map<string, string>();
 
       if (agentMapping) {
-        const agentEmails = new Set<string>();
-        for (const row of parsedData.rows) {
-          const email = row[agentMapping.fileColumn];
-          if (email) {
-            agentEmails.add(String(email).trim().toLowerCase());
+        try {
+          const agentEmails = new Set<string>();
+          for (const row of parsedData.rows) {
+            try {
+              const email = row[agentMapping.fileColumn];
+              if (email) {
+                agentEmails.add(String(email).trim().toLowerCase());
+              }
+            } catch (error: any) {
+              console.error('Error processing agent email from row:', error);
+              continue;
+            }
           }
-        }
 
-        const agentEmailArray = Array.from(agentEmails);
-        for (const email of agentEmailArray) {
-          const user = await getUserByEmail(email);
-          if (user) {
-            agentEmailMap.set(email.toLowerCase(), user.uid);
+          const agentEmailArray = Array.from(agentEmails);
+          for (const email of agentEmailArray) {
+            try {
+              const user = await getUserByEmail(email);
+              if (user) {
+                agentEmailMap.set(email.toLowerCase(), user.uid);
+              }
+            } catch (error: any) {
+              console.error(`Error fetching user by email ${email}:`, error);
+              continue;
+            }
           }
+        } catch (error: any) {
+          console.error('Error processing agent mappings:', error);
         }
       }
 
       const contacts: Omit<Contact, 'id' | 'createdOn'>[] = [];
 
-      for (const row of parsedData.rows) {
-        const contact: any = {
-          firstName: '',
-          lastName: '',
-          phone: '',
-          email: '',
-        };
+      try {
+        for (const row of parsedData.rows) {
+          try {
+            const contact: any = {
+              firstName: '',
+              lastName: '',
+              phone: '',
+              email: '',
+            };
 
-        for (const mapping of mappings) {
-          const value = row[mapping.fileColumn];
-          if (value !== null && value !== undefined && value !== '') {
-            const stringValue = String(value).trim();
+            for (const mapping of mappings) {
+              try {
+                const value = row[mapping.fileColumn];
+                if (value !== null && value !== undefined && value !== '') {
+                  const stringValue = String(value).trim();
 
-            if (mapping.systemField === 'agentUid') {
-              const uid = agentEmailMap.get(stringValue.toLowerCase());
-              if (uid) {
-                contact.agentUid = uid;
+                  if (mapping.systemField === 'agentUid') {
+                    const uid = agentEmailMap.get(stringValue.toLowerCase());
+                    if (uid) {
+                      contact.agentUid = uid;
+                    }
+                  } else {
+                    contact[mapping.systemField] = stringValue;
+                  }
+                }
+              } catch (error: any) {
+                console.error(`Error processing mapping for ${mapping.fileColumn}:`, error);
+                continue;
               }
-            } else {
-              contact[mapping.systemField] = stringValue;
             }
+
+            if (contact.phone || contact.email) {
+              contacts.push(contact);
+            }
+          } catch (error: any) {
+            console.error('Error processing contact row:', error);
+            continue;
           }
         }
-
-        if (contact.phone || contact.email) {
-          contacts.push(contact);
-        }
+      } catch (error: any) {
+        console.error('Error building contacts array:', error);
+        throw new Error('Failed to process contact data');
       }
 
-      const importSummary = await importContacts(contacts, (progress) => {
-        setImportProgress(progress);
-      });
+      if (contacts.length === 0) {
+        throw new Error('No valid contacts found to import');
+      }
+
+      let importSummary;
+      try {
+        importSummary = await importContacts(contacts, (progress) => {
+          setImportProgress(progress);
+        });
+      } catch (error: any) {
+        console.error('Error importing contacts:', error);
+        throw new Error(`Failed to import contacts: ${error.message || 'Unknown error'}`);
+      }
 
       setSummary(importSummary);
       setCheckingDuplicates(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to import contacts');
+      console.error('Error in handleFinalChecks:', err);
+      setError(err.message || 'Failed to import contacts. Please try again.');
       setCheckingDuplicates(false);
       setCurrentStep(2);
     }

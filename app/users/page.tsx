@@ -115,6 +115,9 @@ export default function UsersPage() {
       setErrors({});
       setShowSuccess(true);
     } catch (err: any) {
+      console.error('Error saving user:', err);
+      setError(err.message || 'Failed to save user. Please try again.');
+      setShowSuccess(false);
     }
   };
 
@@ -159,8 +162,11 @@ export default function UsersPage() {
       setSuccessMessage('User deleted successfully');
       setShowSuccess(true);
     } catch (err: any) {
+      console.error('Error deleting user:', err);
+      setError(err.message || 'Failed to delete user. Please try again.');
       setShowDeleteConfirm(false);
       setUserToDelete(null);
+      setShowSuccess(false);
     }
   };
 
